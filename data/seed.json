@@ -1,0 +1,53 @@
+{
+  "importedAt": "2000-01-01T00:00:00.000Z",
+  "sourceFile": "empty-starter",
+  "items": [],
+  "kits": [],
+  "shipments": [],
+  "shipmentDocuments": [],
+  "wbFbs": {
+    "handledOrderIds": []
+  },
+  "wbFbo": {
+    "handledSupplyIds": []
+  },
+  "receipts": [],
+  "movements": [],
+  "users": [
+    {
+      "id": "admin",
+      "name": "Администратор",
+      "role": "admin"
+    }
+  ],
+  "layout": {
+    "projectName": "Склад",
+    "blockTitles": {
+      "watches": "Часы и комплектующие",
+      "straps": "Ремешки",
+      "assembled": "Собрано на складе",
+      "shipments": "Поставки"
+    },
+    "blockOrder": [
+      "watches",
+      "straps",
+      "assembled"
+    ],
+    "watchColumns": [
+      "name",
+      "qty",
+      "cost",
+      "sum"
+    ],
+    "strapColumns": [
+      "name",
+      "size",
+      "qty",
+      "cost",
+      "sum"
+    ],
+    "columnWidths": {},
+    "blockWidths": {},
+    "showHidden": false
+  }
+}

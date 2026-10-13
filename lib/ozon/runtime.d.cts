@@ -1,0 +1,2 @@
+export type OzonPosting={number:string;orderId:string;status:string;substatus:string;createdAt:string;shipmentDate:string|null;warehouseId:string;warehouseName:string;products:{sku:string;offerId:string;name:string;quantity:number;price:number}[]};
+export type OzonSnapshot={schemaVersion:1;clientId:string;revision:number;postingsRevision?:number;products:unknown[];stocks:unknown[];accruals:Record<string,unknown[]>;postings:OzonPosting[];updated:Record<string,string>};

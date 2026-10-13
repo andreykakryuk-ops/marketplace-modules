@@ -1,0 +1,1 @@
+import type {OzonPosting} from './runtime.cjs';export function recoverPostings(read:(endpoint:string,body?:unknown)=>Promise<unknown>,options:{start:string;end:string;previous?:OzonPosting[];tracked?:string[];lastSuccess?:string|null}):Promise<{postings:OzonPosting[];coverage:unknown}>;

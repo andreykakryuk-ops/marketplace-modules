@@ -1,0 +1,1 @@
+export function AuthShell({title,hint,children}:{title?:string;hint?:string;children:React.ReactNode}){return <main className="auth-page"><section className="auth-card"><h1>{title||'Склад'}</h1>{hint?<p className="hint">{hint}</p>:null}{children}</section></main>;}

@@ -1,0 +1,4 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';import {canonicalArticle} from '../lib/article-mapping';import type {Item} from '../lib/types';
+const items=[{id:'finished-a',stockKind:'finished',sku:'KIT-A'},{id:'component',stockKind:'main',sku:'STRAP'}] as Item[];
+test('different seller offers share one warehouse kit without duplicating its physical quantity',()=>{assert.equal(canonicalArticle('SELLER-A',{'SELLER-A':'finished-a'},items),'KIT-A');assert.equal(canonicalArticle('SELLER-B',{'SELLER-B':'finished-a'},items),'KIT-A');assert.equal(canonicalArticle('UNKNOWN',{},items),'UNKNOWN');});
+test('deleted or component mapping never silently redirects orders',()=>{assert.throws(()=>canonicalArticle('A',{A:'deleted'},items),/MAPPING_BROKEN/);assert.throws(()=>canonicalArticle('A',{A:'component'},items),/MAPPING_BROKEN/);});

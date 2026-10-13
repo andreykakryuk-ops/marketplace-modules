@@ -1,0 +1,22 @@
+'use server';
+import {getSessionUser} from '@/lib/session';import {readMarketplaceSettings,saveWbSettings,readOzonConnection,saveOzonConnection,saveWbArticle} from '@/lib/connectors';
+import {readState} from '@/lib/store';import {procurement} from '@/lib/procurement-service';
+import {createReadClient,accessSummary} from '@/lib/ozon/read-client.cjs';import {syncWbFbs} from '@/lib/wb-fbs';import {syncWbFbo} from '@/lib/wb-fbo';import {syncOzonFbs} from '@/lib/ozon';
+async function admin(){const user=await getSessionUser();if(user.role!=='admin')throw Error('FORBIDDEN');}
+export async function saveArticleMapping(form:FormData){await admin();try{const kind=String(form.get('marketplace')),article=String(form.get('article')??'').trim(),finishedItemId=String(form.get('finishedItemId')),state=readState();if(!article||article.length>250||/[\u0000-\u001f]/.test(article)||['__proto__','constructor','prototype'].includes(article)||!state.kits.some(k=>k.finishedItemId===finishedItemId&&k.status==='ok'))throw Error('INVALID_MAPPING');
+if(kind==='WB'){if(!readMarketplaceSettings().wb)throw Error('CONNECT_FIRST');saveWbArticle(article,finishedItemId);}else if(kind==='Ozon'){const c=readOzonConnection();if(!c||!/^\d+$/.test(article))throw Error('INVALID_SKU');const user=await getSessionUser(),plan=await procurement.read();await procurement.change({id:user.id,allowed:true},plan.revision,{kind:'mapping',key:'ozon:'+c.clientId+':'+article,finishedItemId},state.items,state.kits);}else throw Error('INVALID_MAPPING');return {ok:true,message:'Артикул связан с комплектом. При следующем обновлении заказ попадёт в поставку.'};}catch{return {ok:false,message:'Проверьте подключение, артикул и полный состав выбранного комплекта.'};}}
+export async function saveWbConnection(form:FormData){await admin();try{
+ const token=String(form.get('token')??'').trim(),parts=token.split('.');if(parts.length!==3||token.length>8192||/[\r\n]/.test(token))throw Error('INVALID_KEY');
+ const c=JSON.parse(Buffer.from(parts[1],'base64url').toString());if(!/^[0-9a-f-]{36}$/i.test(c.sid)||!Number.isSafeInteger(c.exp)||c.exp<=Date.now()/1000)throw Error('INVALID_KEY');
+ const old=readMarketplaceSettings().wb;if(old&&old.storeId!==c.sid.toLowerCase())throw Error('SELLER_CHANGED');
+ const response=await fetch('https://marketplace-api.wildberries.ru/api/v3/orders/new',{headers:{Authorization:token},redirect:'error',cache:'no-store',signal:AbortSignal.timeout(15000)});
+ if(!response.ok){await response.body?.cancel();throw Error('ACCESS_DENIED');}const data=await response.json();if(!Array.isArray(data.orders))throw Error('INVALID_RESPONSE');
+ saveWbSettings({token,storeId:c.sid.toLowerCase(),enabled:true,fboEnabled:form.get('fbo')==='on',checkedAt:new Date().toISOString()});return {ok:true,message:'Ключ WB проверен и сохранён. Автоматическая загрузка выполняется каждые 60 секунд.'};
+}catch(e){return {ok:false,message:(e as Error).message==='SELLER_CHANGED'?'Подключён другой продавец. Не смешивайте кабинеты в одной установке.':'Не удалось проверить WB: проверьте ключ, срок и доступ «Маркетплейс».'};}}
+export async function saveOzonApi(form:FormData){await admin();try{
+ const clientId=String(form.get('clientId')??'').trim(),apiKey=String(form.get('apiKey')??'').trim(),old=readOzonConnection();if(old&&old.clientId!==clientId)throw Error('SELLER_CHANGED');
+ const read=createReadClient({clientId,apiKey});const access=accessSummary(await read('/v1/roles',{}));if(!access.capabilities.fbs)throw Error('ACCESS_DENIED');
+ saveOzonConnection({clientId,apiKey,revision:(old?.revision??0)+1,verifiedAt:new Date().toISOString(),syncPaused:false});return {ok:true,message:'Seller API проверен и сохранён. Автоматическая загрузка FBS выполняется каждые 60 секунд.'};
+}catch(e){return {ok:false,message:(e as Error).message==='SELLER_CHANGED'?'Подключён другой продавец. Нужна отдельная установка или миграция.':'Не удалось проверить Ozon: нужны Seller Client ID, API-ключ и разрешение FBS.'};}}
+export async function refreshConnectors(){await admin();const results=await Promise.allSettled([syncWbFbs(true),syncOzonFbs(),...(readMarketplaceSettings().wb?.fboEnabled?[syncWbFbo(true)]:[])]);
+ const ok=results.every(r=>r.status==='fulfilled'&&(!(r.value&&typeof r.value==='object'&&'ok' in r.value)||r.value.ok));return {ok,message:ok?'Синхронизация завершена. Откройте «Поставки».':'Некоторые источники не обновились. Последние данные сохранены; проверьте статусы.'};}

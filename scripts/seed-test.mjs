@@ -1,0 +1,8 @@
+import fs from 'node:fs';import path from 'node:path';
+if(process.env.WB_BROWSER_TEST!=='1'||process.env.FBS_SYNC_ENABLED!=='0'||process.env.AUTH_REQUIRED!=='0')throw Error('Isolated synthetic test only');
+const file=path.resolve('data/app-state.json');
+for(const name of ['data/auth.json','data/marketplace-settings.json','data/ozon/connection.json'])if(fs.existsSync(name))throw Error('Refuse to overwrite a configured installation');
+if(fs.existsSync(file)){const current=JSON.parse(fs.readFileSync(file,'utf8'));const empty=current.sourceFile==='empty-starter'&&['items','kits','shipments','shipmentDocuments','receipts','movements'].every(k=>Array.isArray(current[k])&&current[k].length===0);if(current.sourceFile!=='synthetic-starter-test'&&!empty)throw Error('Refuse to overwrite existing warehouse');}
+const state=JSON.parse(fs.readFileSync('data/seed.json','utf8'));state.sourceFile='synthetic-starter-test';
+state.items=[{id:'device-test',sku:'TEST-DEVICE',name:'Тестовое устройство',stockKind:'main',category:'watch',strapSize:null,cost:500,lastPurchaseCost:500,needsReview:false,onHand:50,reserved:0,sortOrder:0,hidden:false},{id:'strap-test',sku:'TEST-STRAP',name:'Тестовый ремешок',stockKind:'main',category:'strap',strapSize:22,cost:50,lastPurchaseCost:50,needsReview:false,onHand:100,reserved:0,sortOrder:1,hidden:false},{id:'box-test',sku:'TEST-BOX',name:'Тестовая коробка',stockKind:'main',category:'box',strapSize:null,cost:10,lastPurchaseCost:10,needsReview:false,onHand:100,reserved:0,sortOrder:2,hidden:false}];
+fs.writeFileSync(file,JSON.stringify(state,null,2));console.log('Synthetic starter fixture installed; external sync disabled.');
